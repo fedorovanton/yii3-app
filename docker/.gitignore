@@ -1,0 +1,7 @@
+/mysql/*
+/logs/mysql/*
+/logs/nginx/*
+
+!/mysql/.gitkeep
+!/logs/mysql/.gitkeep
+!/logs/nginx/.gitkeep

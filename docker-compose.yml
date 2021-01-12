@@ -1,0 +1,65 @@
+# Версия docker-compose
+version: '3.6'
+
+# Создаем общую сеть "yii3-network" для всех контейнеров
+networks:
+  yii3-network:
+    driver: bridge
+
+# Создаем отдельные контейнеры
+services:
+
+  # MySQL
+  database:
+    image: "mysql:5.7"
+    restart: always
+    # Показываем наружу 3306 порт
+    ports:
+      - "3306:3306"
+    # Подключаем к общей сети с другими контейнерами
+    networks:
+      - yii3-network
+    volumes:
+      # Для Linux:
+      # - /srv/docker/mysql:/var/lib/mysql
+      # - /srv/docker/logs/mysql:/var/log/mysql
+      # Для Mac OS:
+      - ./docker/mysql:/var/lib/mysql
+      - ./docker/logs/mysql:/var/log/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: yii3_demo_db
+
+  # NGINX
+  nginx:
+    image: "nginx:latest"
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    # Подключаем к общей сети с другими контейнерами
+    networks:
+      - yii3-network
+    volumes:
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./docker/logs/nginx:/var/log/nginx
+      - ./app:/var/www/html
+    # nginx должен общаться с web контейнером
+    links:
+      # используется в yii3-dev.conf строчка fastcgi_pass web:9000;
+      - "web"
+
+  # Контейнер с веб-приложением (Yii2 + PHP7.4)
+  web:
+    # у нас свой образ для PHP, указываем путь к нему и говорим что его надо собрать
+    build: ./docker/web/build-image
+    volumes:
+      - ./app:/var/www/html
+    networks:
+      - yii3-network
+    links:
+      # используется common/config/main-local.php в mysql:host=database;
+      - "database"
+    depends_on:
+      - database
+    working_dir: /var/www/html
